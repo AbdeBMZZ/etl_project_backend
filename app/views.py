@@ -158,13 +158,39 @@ def transformed_data_list(request):
 
     elif request.method == 'POST':
         try:
-            transformed_data = TransformedData(
-                csv_file_id= request.data['csv_file_id'],
-                rule_id= request.data['rule_id']
-            )
-            local_session.add(transformed_data)
-            local_session.commit()
+            csv_file = local_session.query(CSVFile).filter_by(id=request.data['csv_file_id']).first()
+            rule = local_session.query(TransformationRule).filter_by(id=request.data['rule_id']).first()
 
-            return Response({'message': 'TransformedData was created successfully!'}, status=status.HTTP_201_CREATED)
+            print(csv_file.file_path)
+
+            df = pd.read_csv(csv_file.file_path)
+
+            headers = df.columns.tolist()
+            rows = df.values.tolist()
+
+            matches = [i for i, header in enumerate(headers) if header.lower() == rule.column.lower()]
+
+            if len(matches) > 0:
+                column_index = matches[0]
+                print(column_index)
+
+            for row in rows:
+                try:
+                    value = float(row[column_index])
+                    if rule.operation == "addition":
+                        row[column_index] = value + float(rule.value)
+                    elif rule.operation == "subtract":
+                        row[column_index] = value - float(rule.value)
+                    elif rule.operation == "multiply":
+                        row[column_index] = value * float(rule.value)
+                    elif rule.operation == "divide":
+                        row[column_index] = value / float(rule.value)
+                except:
+                    row[column_index] = "---"
+
+            return JsonResponse({
+                'headers': headers,
+                'rows': rows
+            }, status=status.HTTP_201_CREATED)
         except:
             return Response({'error': 'TransformedData does not exist'}, status=status.HTTP_404_NOT_FOUND)
