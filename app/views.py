@@ -192,10 +192,12 @@ def transformed_data_list(request):
             local_session.add(transformed_data)
             local_session.commit()
 
-            
-            return JsonResponse({
-                'headers': headers,
-                'rows': rows,
+
+            df = df.fillna('---')
+
+            return Response({
+                'headers': df.columns.tolist(),
+                'rows': df.values.tolist(),
                 'transformed_file_ID': csv_transformed.id
             }, status=status.HTTP_201_CREATED)
         except:
