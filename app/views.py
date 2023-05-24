@@ -27,7 +27,6 @@ def csv_file_list(request):
     elif request.method == 'POST':
 
         file = request.FILES['file_path']  
-        file_name = "test.csv"
 
         file_directory = 'csv_files'
 
@@ -161,36 +160,42 @@ def transformed_data_list(request):
             csv_file = local_session.query(CSVFile).filter_by(id=request.data['csv_file_id']).first()
             rule = local_session.query(TransformationRule).filter_by(id=request.data['rule_id']).first()
 
-            print(csv_file.file_path)
-
             df = pd.read_csv(csv_file.file_path)
+
+            column_name = rule.column.lower()
+            column_index = df.columns.str.lower().tolist().index(column_name)
+
+            value = pd.to_numeric(df.iloc[:, column_index], errors='coerce')
+
+            operator = rule.operator
+            transformed_values = eval('value ' + operator + ' ' + str(rule.value))
+
+            df.iloc[:, column_index] = transformed_values
 
             headers = df.columns.tolist()
             rows = df.values.tolist()
 
-            matches = [i for i, header in enumerate(headers) if header.lower() == rule.column.lower()]
+            file_directory = 'transformed_files'
 
-            if len(matches) > 0:
-                column_index = matches[0]
-                print(column_index)
+            file_path = os.path.join(file_directory, csv_file.file_path.split('/')[-1])
 
-            for row in rows:
-                try:
-                    value = float(row[column_index])
-                    if rule.operation == "addition":
-                        row[column_index] = value + float(rule.value)
-                    elif rule.operation == "subtract":
-                        row[column_index] = value - float(rule.value)
-                    elif rule.operation == "multiply":
-                        row[column_index] = value * float(rule.value)
-                    elif rule.operation == "divide":
-                        row[column_index] = value / float(rule.value)
-                except:
-                    row[column_index] = "---"
+            os.makedirs(file_directory, exist_ok=True)
 
+            df.to_csv(file_path, index=False)
+
+            csv_transformed = CSVFile(file_path=file_path)
+
+            transformed_data = TransformedData(csv_file=csv_file, rule=rule)
+
+            local_session.add(csv_transformed)
+            local_session.add(transformed_data)
+            local_session.commit()
+
+            
             return JsonResponse({
                 'headers': headers,
-                'rows': rows
+                'rows': rows,
+                'transformed_file_ID': csv_transformed.id
             }, status=status.HTTP_201_CREATED)
         except:
             return Response({'error': 'TransformedData does not exist'}, status=status.HTTP_404_NOT_FOUND)

@@ -17,8 +17,11 @@ requires Python3.x
 Install the dependencies and start the server.
 
 ```zsh
-cd etl_project_backend
-python manage.py runserver
+╰─ cd etl_project_backend
+    ╰─ mv .venv ../
+    ╰─ source .venv/bin/activate
+    ╰─ python manage.py runserver
+
 ```
 
 Dillinger is very easy to install and deploy in a Docker container.
