@@ -40,18 +40,19 @@ def csv_file_list(request):
                 destination.write(chunk)
 
         df = pd.read_csv(file_path)
-        headers = df.columns.tolist()
-        rows = df.values.tolist()
 
         csv_file = CSVFile(file_path=file_path)
 
         local_session.add(csv_file)
         local_session.commit()
 
-        return JsonResponse({
-            'message': 'CSVFile was created successfully!',
-            'headers': headers,
-            'rows': rows
+        df = df.fillna('---')
+
+        
+        return Response({
+            'headers': df.columns.tolist(),
+            'rows': df.values.tolist(),
+            'csv_file_ID': csv_file.id
         }, status=status.HTTP_201_CREATED)
 
 
