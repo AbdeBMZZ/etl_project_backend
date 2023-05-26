@@ -186,7 +186,7 @@ def transformed_data_list(request):
 
             csv_transformed = CSVFile(file_path=file_path)
 
-            transformed_data = TransformedData(csv_file=csv_file, rule=rule)
+            transformed_data = TransformedData(csv_file=csv_transformed, rule=rule)
 
             local_session.add(csv_transformed)
             local_session.add(transformed_data)
@@ -202,3 +202,37 @@ def transformed_data_list(request):
             }, status=status.HTTP_201_CREATED)
         except:
             return Response({'error': 'TransformedData does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def transformed_data_history(request, pk):
+    try:
+        transformed_data = local_session.query(TransformedData).filter_by(rule_id=pk).all()
+    except TransformedData.DoesNotExist:
+        return Response({'error': 'TransformedData does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        data = []
+        for td in transformed_data:
+            df = pd.read_csv(td.csv_file.file_path)
+            df = df.fillna('---')
+
+            transactions = []
+            for index, row in df.iterrows():
+                try:
+                    amount = float(row["Amount"])
+                except ValueError:
+                    amount = 0.0
+
+                transaction = {
+                    "Transaction ID": row["Transaction ID"],
+                    "Transaction Date": str(row["Transaction Date"]),
+                    "Amount": amount,
+                    "Merchant Name": row["Merchant Name"],
+                }
+                transactions.append(transaction)
+
+            data.append({
+                'data': transactions
+            })
+
+        return Response(data)

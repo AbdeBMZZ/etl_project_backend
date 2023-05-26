@@ -24,5 +24,6 @@ urlpatterns = [
     path('api/csv-files/<int:pk>/', views.csv_file_detail),
     path('api/transformation-rules/', views.transformation_rule_list),
     path('api/transformation-rules/<int:pk>/', views.transformation_rule_detail),
-    path('api/transformed-data/', views.transformed_data_list)
+    path('api/transformed-data/', views.transformed_data_list),
+    path('api/get-history/<int:pk>/', views.transformed_data_history),
 ]
